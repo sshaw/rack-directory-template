@@ -8,14 +8,14 @@ module Rack
 	<html>
 	<head>
 	  <title>%s</title>
-	  <style>
+	  <style type="text/css">
 	    table { width: 100%%; }
 	    th { text-align: left }
 	  </style>
 	</head>
 	<body>
 	<h1>%s</h1>
-	<table><tr><th>Name</th><th>Size</th><th>Type</th><th>Mtime</th></tr>
+	<table><tr><th>Name</th><th>Size</th><th>Type</th><th>Last Modified</th></tr>
           %s
         </table>
 	</body>
@@ -32,15 +32,19 @@ module Rack
       class << self
         def html(listing)
           html = ""
-          if listing[:url] != "/" && i = listing[:url].rindex("/")
-            html << sprintf(HTML_UPDIR, listing[:url][0, i == 0 ? 1 : i])
+          root = listing[:url]
+          # Remove last, possibly unnormalized, fragment
+          if root !~ %r{^/+$}
+            url = root.gsub(%r{[^/]+/*$}, "")
+            html << sprintf(HTML_UPDIR, url)
           end
           
           listing[:files].each do |file|
             html << entry(HTML_ROW, file)
           end
           
-          sprintf HTML, listing[:url], listing[:url], html
+          root = Rack::Utils.escape_html(Rack::Utils.unescape(root))
+          sprintf HTML, root, root, html
         end
 
         def xml(listing)

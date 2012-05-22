@@ -26,34 +26,43 @@ class TestResponseTypes < DirectoryTemplateTest
     mock(Factory).html(@listing)
     req "/"
     assert_equal 200, last_response.status
+    assert_equal "text/html", last_response.content_type
   end
 
   def test_application_xml_response   
     mock(Factory).xml(@listing)
-    req "/", "application/xml"
+    type = "application/xml"
+    req "/", type
     assert_equal 200, last_response.status
+    assert_equal type, last_response.content_type
   end
 
   def test_text_xml_response   
     mock(Factory).xml(@listing)
-    req "/", "text/xml"
+    type = "text/xml"
+    req "/", type
     assert_equal 200, last_response.status
+    assert_equal type, last_response.content_type
   end
 
   def test_application_json_response   
     mock(Factory).json(@listing)
-    req "/", "application/json"
+    type = "application/json"
+    req "/", type
     assert_equal 200, last_response.status
+    assert_equal type, last_response.content_type
   end
   
   def test_text_javascript_response   
     mock(Factory).json(@listing)
-    req "/", "text/javascript"
+    type = "text/javascript"
+    req "/", type
     assert_equal 200, last_response.status
+    assert_equal type, last_response.content_type
   end
 
   def test_not_acceptable
-    get "/", {}, "HTTP_ACCEPT" => "text/plain"
+    req "/", "text/plain"
     assert_equal 406, last_response.status
   end
 

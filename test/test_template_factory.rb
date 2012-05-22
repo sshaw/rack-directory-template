@@ -1,4 +1,5 @@
 require "json"
+require "rack/utils"
 require "rexml/document"
 require "rack/directory_template/template_factory"
 
@@ -14,9 +15,10 @@ class TestTemplateFactory < DirectoryTemplateTest
     @dir[:url] = "/"
     html = Factory.html(@dir)
     doc  = Document.new(html)
+    escaped = Rack::Utils::escape_html(@dir[:url])
 
-    assert_equal @dir[:url], doc.get_text("//title").to_s
-    assert_equal @dir[:url], doc.get_text("//h1").to_s
+    assert_equal escaped, doc.get_text("//title").to_s
+    assert_equal escaped, doc.get_text("//h1").to_s
 
     rows = doc.get_elements("//tr")
     assert_equal 2, rows.size   # heading and dir entry
@@ -34,9 +36,10 @@ class TestTemplateFactory < DirectoryTemplateTest
   def test_html_for_subdir
     html = Factory.html(@dir)
     doc  = Document.new(html)
-
-    assert_equal @dir[:url], doc.get_text("//title").to_s
-    assert_equal @dir[:url], doc.get_text("//h1").to_s
+    escaped = Rack::Utils::escape_html(@dir[:url])
+    
+    assert_equal escaped, doc.get_text("//title").to_s
+    assert_equal escaped, doc.get_text("//h1").to_s
 
     rows = doc.get_elements("//tr")
     assert_equal 3, rows.size   # heading, updir and dir entry

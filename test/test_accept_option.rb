@@ -28,6 +28,6 @@ class TestAcceptOption < DirectoryTemplateTest
 
   def test_json_not_accepted
     req "/", "application/json"
-    assset_equal 206, last_response.status
+    assert_equal 406, last_response.status
   end
 end

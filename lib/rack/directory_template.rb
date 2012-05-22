@@ -42,7 +42,7 @@ module Rack
       end
     end
 
-    protected
+    private
     def not_found
       reply(404, "Not Found\n")
     end
@@ -53,6 +53,10 @@ module Rack
 
     def forbidden
       reply(403, "Forbidden\n")
+    end
+
+    def server_error(e = "")
+      reply(500, "Error: #{e}\n")
     end
 
     def reply(code, message, headers = {})
@@ -67,27 +71,25 @@ module Rack
       return not_acceptable unless @accept.include?(TYPES[type])
 
       realpath = realpath(env)
-      reqpath  = ::File.join("/", env["SCRIPT_NAME"].to_s, env["PATH_INFO"].to_s)
-      # ex
+      reqpath  = env["SCRIPT_NAME"].to_s + env["PATH_INFO"].to_s
       listing  = create_listing(realpath, reqpath)
 
       t = @templates[TYPES[type]]
       response = t.respond_to?(:call) ? t.call(listing) : t.send(TYPES[type], listing)
 
       reply(200, response, "Content-Type" => type)
+    rescue => e
+      server_error(e.message)
     end
 
     def create_listing(realpath, reqpath, curdepth = 1)
       parent = stat(realpath)
-      return {} unless parent
-
       parent[:url]  = reqpath
-      parent[:name] = reqpath.split("/")[-1] || "/"
+      parent[:name] = reqpath.split(%r|/+|)[-1] || "/"
 
       listing = []
       dir(realpath) do |path, basename|
         entry = stat(path)
-        next unless entry
 
         url = reqpath.dup
         url << "/" unless url.end_with?("/")
@@ -117,24 +119,24 @@ module Rack
       entry[:user]  = Etc.getpwuid(st.uid).name
       entry[:group] = Etc.getgrgid(st.gid).name
       entry
-    rescue # nothing
     end
 
     def dir(root)
       Dir.foreach(root) do |file|
-        next if file =~ %r{\A\.\.?\z}
+        next if file =~ %r{^\.}
         path = ::File.join(root, file)
         yield(path, file)
       end
     end
 
     def realpath(env)
-      target = ::File.join("/", env["PATH_INFO"].to_s)
+      target = env["PATH_INFO"] || "/"
       # TODO: Uhhhh, CGI unescape here..?!
       target = ::File.expand_path(Rack::Utils.unescape(target), "/")
       ::File.join(@root, target)
     end
 
+    # Maybe rangle this insanity into its own class
     def create_templates(config)
       check_class = lambda do |klass, m|
         unless klass.respond_to?(m)

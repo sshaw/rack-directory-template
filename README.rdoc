@@ -15,7 +15,7 @@ Generate directory listings in the request's prefered format. Customize response
  run Rack::DirectoryTemplate.new, ".", :accept => [:html, :json]
 
  # Custom templates
- run Rack::DirectoryTemplate.new, ".", :templates => YourBuilder
+ run Rack::DirectoryTemplate.new, ".", :templates => YourFactory
  run Rack::DirectoryTemplate.new, ".", :templates => "/path/to/erb/templates"  
  run Rack::DirectoryTemplate.new, ".", :templates => { :json => lambda { |listing| ... } }
 
