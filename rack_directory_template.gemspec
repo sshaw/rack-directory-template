@@ -1,6 +1,7 @@
 Gem::Specification.new do |s|
   s.name        = "rack_directory_template"
   #s.version     = Rack::DirectoryTemplate::VERSION
+  s.version     = "0.0.1"
   s.date        = Date.today
   s.summary     = "Generate directory listings in HTML, JSON, or XML. Customize your responses via ERB templates and/or callbacks."
   s.description =<<-DESC

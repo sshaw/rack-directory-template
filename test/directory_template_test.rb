@@ -1,3 +1,4 @@
+require "tmpdir"
 require "fileutils"
 require "test/unit"
 require "rack/test"

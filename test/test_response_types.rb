@@ -1,5 +1,4 @@
 require "rr"
-require "tmpdir"
 require "directory_template_test"
 require "rack/directory_template/template_factory"
 

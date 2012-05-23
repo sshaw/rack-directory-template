@@ -18,7 +18,7 @@ class TestAcceptOption < DirectoryTemplateTest
   
   def test_html_accepted
     req "/"
-    assert last_response.body.start_with?("<html")
+    assert last_response.body =~ /\s*<html/
   end
 
   def test_xml_accepted

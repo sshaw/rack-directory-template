@@ -33,7 +33,7 @@ module Rack
         def html(listing)
           html = ""
           root = listing[:url]
-          # Remove last, possibly unnormalized, fragment
+          # Remove last, possibly unnormalized, path segement
           if root !~ %r{^/+$}
             url = root.gsub(%r{[^/]+/*$}, "")
             html << sprintf(HTML_UPDIR, url)

@@ -21,9 +21,8 @@ module Rack
       raise ArgumentError, "not a directory #{@root}" unless ::File.directory?(@root)
 
       @app    = options[:app] || Rack::File.new(@root)
-      @depth  = options[:depth].to_i
       # TODO: rename to @recursive?
-      @depth  = 1 if @depth < 1
+      @depth  = options[:depth].to_i      
       @accept = [ options[:accept] || TYPES.values ].flatten.compact
       @templates = create_templates(options[:templates])
     end
@@ -55,7 +54,7 @@ module Rack
       reply(403, "Forbidden\n")
     end
 
-    def server_error(e = "")
+    def server_error(e)
       reply(500, "Error: #{e}\n")
     end
 
@@ -131,7 +130,6 @@ module Rack
 
     def realpath(env)
       target = env["PATH_INFO"] || "/"
-      # TODO: Uhhhh, CGI unescape here..?!
       target = ::File.expand_path(Rack::Utils.unescape(target), "/")
       ::File.join(@root, target)
     end

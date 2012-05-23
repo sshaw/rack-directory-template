@@ -60,10 +60,10 @@ class TestTemplateFactory < DirectoryTemplateTest
     assert_equal "a&amp;b", doc.get_text("//tr[3]/td/a").to_s
   end
 
-  # def test_json
-  #   json = JSON.load(Factory.json(@dir))
-  #   assert_equal @dir, json
-  # end
+  def test_json
+    json = JSON.parse(Factory.json(@dir), :symbolize_names => true)
+    assert_equal @dir, json
+  end
   
   def test_xml
     xml = Factory.xml(@dir)
