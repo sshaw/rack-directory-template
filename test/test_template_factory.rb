@@ -5,7 +5,6 @@ require "rack/directory_template/template_factory"
 
 class TestTemplateFactory < DirectoryTemplateTest
   include REXML
-  Factory = Rack::DirectoryTemplate::TemplateFactory
 
   def setup
     @dir = dir_fixture

@@ -1,7 +1,7 @@
 require "erb"
 require "etc"
+require "rack"
 require "rack/accept"
-require "rack/utils"
 require "rack/directory_template/template_factory"
 
 module Rack
@@ -21,23 +21,25 @@ module Rack
       raise ArgumentError, "not a directory #{@root}" unless ::File.directory?(@root)
 
       @app    = options[:app] || Rack::File.new(@root)
-      # TODO: rename to @recursive?
-      @depth  = options[:depth].to_i      
+      @param  = options[:param]
+      @depth  = options[:recurse] == false ? -1 : options[:recurse] 
+      @depth  = @depth.to_i if @depth != true
       @accept = [ options[:accept] || TYPES.values ].flatten.compact
       @templates = create_templates(options[:templates])
     end
 
     def call(env)
-      path = realpath(env)
+      req  = Rack::Request.new(env)
+      path = realpath(req)
 
       if !::File.exists?(path)
         not_found
       elsif !::File.readable?(path)
         forbidden
       elsif ::File.directory?(path)
-        process_directory(env)
-      else
-        @app.call(env)
+        process_directory(req)
+      else        
+        pass(req)
       end
     end
 
@@ -54,10 +56,6 @@ module Rack
       reply(403, "Forbidden\n")
     end
 
-    def server_error(e)
-      reply(500, "Error: #{e}\n")
-    end
-
     def reply(code, message, headers = {})
       headers["Content-Type"] ||= "text/plain"
       headers["Content-Length"] = message ? message.bytesize.to_s : "0"  # >= 1.8.7
@@ -65,47 +63,50 @@ module Rack
       [code, headers, message]
     end
 
-    def process_directory(env)
-      type = Rack::Accept::Request.new(env).best_media_type(TYPES.keys)
+    def process_directory(req)
+      # Rack::Accept::Request is not a Rack::Request :(
+      type = Rack::Accept::Request.new(req.env).best_media_type(TYPES.keys)
       return not_acceptable unless @accept.include?(TYPES[type])
 
-      realpath = realpath(env)
-      reqpath  = env["SCRIPT_NAME"].to_s + env["PATH_INFO"].to_s
-      listing  = create_listing(realpath, reqpath)
+      reqpath = reqpath(req)
+      realpath = realpath(req)
+      listing = create_listing(realpath, reqpath)
 
       t = @templates[TYPES[type]]
       response = t.respond_to?(:call) ? t.call(listing) : t.send(TYPES[type], listing)
 
       reply(200, response, "Content-Type" => type)
     rescue => e
-      server_error(e.message)
+      reply(500, "Error: #{e}\n")
+    end
+    
+    def pass(req)
+      if @param
+        req.env["PATH_INFO"] = Rack::Utils.escape_path(req[@param]) 
+      end
+      @app.call(req.env)
     end
 
-    def create_listing(realpath, reqpath, curdepth = 1)
+    def create_listing(realpath, reqpath, curdepth = 0)      
       parent = stat(realpath)
-      parent[:url]  = reqpath
-      parent[:name] = reqpath.split(%r|/+|)[-1] || "/"
+      parent[:url] = reqpath 
+      parent[:name] = ::File.basename(reqpath)
+      parent[:files] = []
 
-      listing = []
       dir(realpath) do |path, basename|
-        entry = stat(path)
+        url = ::File.join(reqpath, Rack::Utils.escape_path(basename))
 
-        url = reqpath.dup
-        url << "/" unless url.end_with?("/")
-        url << Rack::Utils.escape_path(basename)
-
-        entry[:url] = url
-        entry[:name] = basename
-
-        # TODO: true should mean no limit
-        if entry[:type] == "directory" && curdepth < @depth
-          entry[:files] = create_listing(path, url, curdepth + 1)
+        if ::File.directory?(path) && (@depth == true || curdepth < @depth)
+          entry = create_listing(path, url, curdepth + 1)
+        else          
+          entry = stat(path)
+          entry[:url] = url
+          entry[:name] = basename
         end
 
-        listing << entry
+        parent[:files] << entry
       end
 
-      parent[:files] = listing
       parent
     end
 
@@ -128,9 +129,16 @@ module Rack
       end
     end
 
-    def realpath(env)
-      target = env["PATH_INFO"] || "/"
-      target = ::File.expand_path(Rack::Utils.unescape(target), "/")
+    def reqpath(req)
+      reqpath  = @param ? Rack::Utils::escape_path(req[@param]) : req.path
+      reqpath ||= "/"
+      reqpath
+    end
+
+    def realpath(req)
+      target = @param ? req[@param] : Rack::Utils.unescape(req.path_info) 
+      target ||= "/"
+      target = ::File.expand_path(target, "/")
       ::File.join(@root, target)
     end
 

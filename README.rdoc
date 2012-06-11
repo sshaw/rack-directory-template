@@ -14,21 +14,31 @@ Generate directory listings in the request's prefered format. Customize response
  # Only accept requests for HTML and JSON 
  run Rack::DirectoryTemplate.new, ".", :accept => [:html, :json]
 
+ # Get the directory from the "file" request parameter, e.g., for JavaScript file browsers.
+ run Rack::DirectoryTemplate.new, ".", :param => "file"
+
  # Custom templates
  run Rack::DirectoryTemplate.new, ".", :templates => YourFactory
  run Rack::DirectoryTemplate.new, ".", :templates => "/path/to/erb/templates"  
  run Rack::DirectoryTemplate.new, ".", :templates => { :json => lambda { |listing| ... } }
 
  # Recursive listings 
- map "/browse" do 
-   run Rack::DirectoryTemplate.new, ".", :depth => 10, :accept => :json
- end
+ run Rack::DirectoryTemplate.new, ".", :recurse => true
 
+ # Recurse with a limit
+ run Rack::DirectoryTemplate.new, ".", :recurse => 10
+ 
 === Description
 
 Rack::DirectoryTemplate is a Rack endpoint for directory listings that examines the request's 
 Accept header and generates a reply in the prefered format. Currently supports HTML, JSON, and XML. 
 Suitable defaults are provided for each format. Customization is possible via ERB templates and/or callbacks.
+
+Directory names can also be given via a request parameter.
+
+=== Todo
+
+* Determine response format based on request URL's extension
 
 === Author
 

@@ -1,8 +1,5 @@
 require "directory_template_test"
 
-#class TestRecursion < DirectoryTemplateTest
-#end
-
 class TestAcceptOption < DirectoryTemplateTest
   def setup
     @tmpdir = Dir.mktmpdir

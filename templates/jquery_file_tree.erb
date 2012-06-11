@@ -1,0 +1,16 @@
+<%# 
+    This template produces a listing suitable for use with the jQuery File Tree: http://www.abeautifulsite.net/blog/2008/03/jquery-file-tree
+%>
+
+<ul class="jqueryFileTree" style="display:none;">
+  <% listing[:files].each do |file| %>		  
+    <% next if file[:type] != "directory" %>
+    <li class="directory collapsed"><a href="#" rel="<%= file[:url] %>/"><%= Rack::Utils.escape_html(file[:name]) %></a></li>
+  <% end %>
+
+  <% listing[:files].each do |file| %>		  
+    <% next if file[:type] == "directory" %>
+    <% ext = ::File.extname(file[:name])[1..-1] %>
+    <li class="file ext_<%= ext %>"><a href="#" rel="<%= file[:url] %>"><%= Rack::Utils.escape_html(file[:name]) %></a></li>
+  <% end %>
+</ul>

@@ -1,4 +1,3 @@
-require "rr"
 require "directory_template_test"
 require "rack/directory_template/template_factory"
 
@@ -7,15 +6,14 @@ class TestResponseTypes < DirectoryTemplateTest
  
   def setup
     @tmpdir  = Dir.mktmpdir
-    @listing = create_listing(@tmpdir)
+    @listing = mktree(@tmpdir, %w[A B])
+    RR.reset
   end
 
   def teardown 
     FileUtils.rm_rf(@tmpdir)
+    RR.verify
   end
-
-  # https://github.com/btakita/rr/issues/35
-  include RR::Adapters::TestUnit
 
   def app
     Rack::DirectoryTemplate.new @tmpdir
@@ -69,11 +67,12 @@ class TestResponseTypes < DirectoryTemplateTest
     req "/_not_there_"
     assert_equal 404, last_response.status
   end
-
-  def test_forbidden    
+  
+  # Skip on Win.. 
+  def test_forbidden        
     no_access = "#{@tmpdir}/nope"
     Dir.mkdir(no_access)
-    File.chmod(0, no_access) # Win
+    File.chmod(0, no_access) 
     req "/nope"
     assert_equal 403, last_response.status
   end
