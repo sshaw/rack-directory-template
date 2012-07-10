@@ -1,6 +1,6 @@
-require "directory_template_test"
+require "test_helper"
 
-class TestUserTemplatesFromHash < DirectoryTemplateTest 
+class TestUserTemplatesFromHash < Test::Unit::TestCase
   def setup
     @tmpdir = Dir.mktmpdir    
     File.open("#{@tmpdir}/json.template", "w") { |f| f.write("json") }

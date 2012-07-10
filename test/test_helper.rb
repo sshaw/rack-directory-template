@@ -1,20 +1,29 @@
 require "rr"
-require "etc"
 require "tmpdir"
 require "test/unit"
 require "rack/utils"
 require "rack/test"
 require "rack/directory_template"
+require "rack/directory_template/util"
 
-class DirectoryTemplateTest < Test::Unit::TestCase
+class Test::Unit::TestCase
   include Rack::Test::Methods
-  include RR::Adapters::RRMethods
-
+  include RR::Adapters::TestUnit
+  
   Factory = Rack::DirectoryTemplate::TemplateFactory
 
   protected
-  def req(path, type = "text/html", params = {})
+  def req(path, *options)
+    params = Hash === options.last ? options.pop : {}  
+    type = options.shift || "text/html"
     get path, params, "HTTP_ACCEPT" => type
+  end
+
+  def session(*options)
+    app = Rack::DirectoryTemplate.new *options
+    t = Rack::Test::Session.new(app)
+    t.header("Accept", "text/html")
+    t
   end
 
   def mktree(root, fs, url = "/")
@@ -39,19 +48,9 @@ class DirectoryTemplateTest < Test::Unit::TestCase
   end
   
   def stat(path, url = "/")
-    entry = { 
-      :url  => url, 
-      :name => url == "/" ? url : File.basename(path) 
-    }
-
-    stat  = File.stat(path)    
-    [:size, :mode, :mtime, :atime, :ctime].each do |field|
-      entry[field] = stat.send(field)
-    end
-    
-    entry[:type]  = stat.ftype
-    entry[:user]  = Etc.getpwuid(stat.uid).name
-    entry[:group] = Etc.getgrgid(stat.gid).name
+    entry = Rack::DirectoryTemplate::Util.stat(path)
+    entry[:url] = url
+    entry[:name] = url == "/" ? url : File.basename(path) 
     entry
   end
 end

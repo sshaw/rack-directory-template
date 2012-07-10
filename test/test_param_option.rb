@@ -1,19 +1,17 @@
-require "directory_template_test"
+require "test_helper"
 
-class TestParamOption < DirectoryTemplateTest
+class TestParamOption < Test::Unit::TestCase
   def setup
     @tmpdir  = Dir.mktmpdir
-    tree = mktree(@tmpdir, ["A", "Dir X" => [ "B C" ]])
-
+    @tree = mktree(@tmpdir, ["A", {"Dir X" => [ "B C" ]}])
     # By default if no param is given the root dir is listed. 
     # Is this "expected", or should a 404 be sent?
-    @listing = tree[:files].find { |e| e[:name] == "Dir X" }
+    @listing = @tree[:files].find { |e| e[:name] == "Dir X" }
     RR.reset
   end
 
   def teardown 
     FileUtils.rm_rf(@tmpdir)
-    RR.verify
   end
 
   def app
@@ -21,24 +19,30 @@ class TestParamOption < DirectoryTemplateTest
   end
 
   def test_post
-    mock(Factory).html(@listing)
-    post "/", :path => "/Dir X"
+    stub(Factory).html
+    post "/", {:path => "/Dir X"}, "HTTP_ACCEPT" => "text/html"
     assert_equal 200, last_response.status
+    assert_received(Factory) { |s| s.html(@listing) }
   end
   
   def test_get
-    mock(Factory).html(@listing)
-    get "/", :path => "/Dir X"
+    stub(Factory).html
+    req "/", :path => "/Dir X"
     assert_equal 200, last_response.status
+    assert_received(Factory) { |s| s.html(@listing) }
   end
 
-  def test_www_encoded_file
-    get "/", :path => "/Dir X/B C"    
+  def test_request_for_file
+    req "/", :path => "/Dir X/B C"    
     assert_equal 200, last_response.status
     # The file's contents are its name
     assert_equal "B C", last_response.body
   end
 
-  #def test_url_is_ignored
-  #end
+  def test_url_is_ignored
+    stub(Factory).html
+    req "/Dir%20X/B%20C", :path => "/"    
+    assert_equal 200, last_response.status
+    assert_received(Factory) { |s| s.html(@tree) }
+  end
 end

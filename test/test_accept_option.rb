@@ -1,6 +1,6 @@
-require "directory_template_test"
+require "test_helper"
 
-class TestAcceptOption < DirectoryTemplateTest
+class TestAcceptOption < Test::Unit::TestCase
   def setup
     @tmpdir = Dir.mktmpdir
   end

@@ -1,18 +1,20 @@
 require "erb"
-require "etc"
 require "rack"
 require "rack/accept"
+require "rack/directory_template/util"
 require "rack/directory_template/template_factory"
 
 module Rack
-  class DirectoryTemplate
-    TYPES = { "text/html"        => :html,
-              "application/json" => :json,
-              "text/javascript"  => :json,  # some (e.g., Prototype) send this but will accept JSON
-              "text/xml"         => :xml,
-              "application/xml"  => :xml }
-
-    TEMPLATES = TYPES.values.inject({}) { |t, format| t[format] = TemplateFactory; t }
+  class DirectoryTemplate    
+    TYPE_TO_FORMAT = { 
+      "text/html" 	  => :html,
+      "application/json"  => :json,
+      "text/javascript"   => :json,  # some (e.g., Prototype) send this but will accept JSON
+      "application/xml"   => :xml,
+      "text/xml"          => :xml
+    }
+    
+    TEMPLATES = TYPE_TO_FORMAT.values.inject({}) { |t, format| t[format] = TemplateFactory; t }
 
     def initialize(root, options = {})
       raise ArgumentError, "root directory required" unless root
@@ -22,9 +24,9 @@ module Rack
 
       @app    = options[:app] || Rack::File.new(@root)
       @param  = options[:param]
-      @depth  = options[:recurse] == false ? -1 : options[:recurse] 
+      @depth  = options[:recurse] == false ? -1 : options[:recurse]
       @depth  = @depth.to_i if @depth != true
-      @accept = [ options[:accept] || TYPES.values ].flatten.compact
+      @accept = [ options[:accept] || TYPE_TO_FORMAT.values.uniq ].flatten.compact
       @templates = create_templates(options[:templates])
     end
 
@@ -38,7 +40,7 @@ module Rack
         forbidden
       elsif ::File.directory?(path)
         process_directory(req)
-      else        
+      else
         pass(req)
       end
     end
@@ -58,39 +60,39 @@ module Rack
 
     def reply(code, message, headers = {})
       headers["Content-Type"] ||= "text/plain"
-      headers["Content-Length"] = message ? message.bytesize.to_s : "0"  # >= 1.8.7
+      headers["Content-Length"] = message ? message.bytesize.to_s : "0"
       message = [message] unless message.respond_to?(:each)
       [code, headers, message]
     end
 
     def process_directory(req)
-      # Rack::Accept::Request is not a Rack::Request :(
-      type = Rack::Accept::Request.new(req.env).best_media_type(TYPES.keys)
-      return not_acceptable unless @accept.include?(TYPES[type])
+      type = Rack::Accept::MediaType.new(req.env["HTTP_ACCEPT"]).best_of(TYPE_TO_FORMAT.keys)
+      format = TYPE_TO_FORMAT[type]
+      return not_acceptable unless @accept.include?(format)
 
       reqpath = reqpath(req)
       realpath = realpath(req)
       listing = create_listing(realpath, reqpath)
 
-      t = @templates[TYPES[type]]
-      response = t.respond_to?(:call) ? t.call(listing) : t.send(TYPES[type], listing)
+      t = @templates[format]
+      response = t.respond_to?(:call) ? t.call(listing) : t.send(format, listing)
 
       reply(200, response, "Content-Type" => type)
     rescue => e
       reply(500, "Error: #{e}\n")
     end
-    
+
     def pass(req)
       if @param
-        req.env["PATH_INFO"] = Rack::Utils.escape_path(req[@param]) 
+        req.env["PATH_INFO"] = Rack::Utils.escape_path(req[@param])
       end
       @app.call(req.env)
     end
 
-    def create_listing(realpath, reqpath, curdepth = 0)      
-      parent = stat(realpath)
-      parent[:url] = reqpath 
-      parent[:name] = ::File.basename(reqpath)
+    def create_listing(realpath, reqpath, curdepth = 0)
+      parent = Util.stat(realpath)
+      parent[:url] = reqpath
+      parent[:name] = reqpath == "/" ? reqpath : ::File.basename(realpath)
       parent[:files] = []
 
       dir(realpath) do |path, basename|
@@ -98,8 +100,8 @@ module Rack
 
         if ::File.directory?(path) && (@depth == true || curdepth < @depth)
           entry = create_listing(path, url, curdepth + 1)
-        else          
-          entry = stat(path)
+        else
+          entry = Util.stat(path)
           entry[:url] = url
           entry[:name] = basename
         end
@@ -108,17 +110,6 @@ module Rack
       end
 
       parent
-    end
-
-    def stat(path)
-      st = ::File.lstat(path)
-      entry = {}
-      [:size, :mode, :mtime, :atime, :ctime].each { |attr| entry[attr] = st.send(attr) }
-      entry[:type]  = st.ftype
-      #TODO: Win
-      entry[:user]  = Etc.getpwuid(st.uid).name
-      entry[:group] = Etc.getgrgid(st.gid).name
-      entry
     end
 
     def dir(root)
@@ -130,13 +121,19 @@ module Rack
     end
 
     def reqpath(req)
-      reqpath  = @param ? Rack::Utils::escape_path(req[@param]) : req.path
-      reqpath ||= "/"
-      reqpath
+      reqpath = if @param
+        if req[@param]
+          # Decoded path param needs to have its parts URI encoded
+          req[@param].gsub(%r|([^/]+)|) { Rack::Utils.escape_path($1) }
+        end
+      else
+        req.path
+      end
+      reqpath || "/"
     end
 
     def realpath(req)
-      target = @param ? req[@param] : Rack::Utils.unescape(req.path_info) 
+      target = @param ? req[@param] : Rack::Utils.unescape(req.path_info)
       target ||= "/"
       target = ::File.expand_path(target, "/")
       ::File.join(@root, target)

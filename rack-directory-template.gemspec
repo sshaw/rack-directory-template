@@ -1,6 +1,5 @@
 Gem::Specification.new do |s|
   s.name        = "rack-directory-template"
-  #s.version     = Rack::DirectoryTemplate::VERSION
   s.version     = "0.0.1"
   s.date        = Date.today
   s.summary     = "Generate directory listings in HTML, JSON, or XML. Customize your responses via ERB templates and/or callbacks."
@@ -15,8 +14,9 @@ Gem::Specification.new do |s|
   s.email       = "sshaw@lucas.cis.temple.edu"
   s.files       = Dir["lib/**/*.rb", "README.rdoc"]
   s.test_files  = Dir["test/*.rb"]
-  s.homepage    = "http://github.com/sshaw/rack_directory_template"
+  s.homepage    = "http://github.com/sshaw/rack-directory-template"
   s.license     = "MIT"
+  s.required_ruby_version = ">= 1.8.7"
   s.add_dependency "json"
   s.add_dependency "rack-accept", "~> 0.4.4"
   s.add_development_dependency "rack-test", "~> 0.6.1"

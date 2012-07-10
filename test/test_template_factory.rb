@@ -2,8 +2,9 @@ require "json"
 require "rack/utils"
 require "rexml/document"
 require "rack/directory_template/template_factory"
+require "test_helper"
 
-class TestTemplateFactory < DirectoryTemplateTest
+class TestTemplateFactory < Test::Unit::TestCase
   include REXML
 
   def setup

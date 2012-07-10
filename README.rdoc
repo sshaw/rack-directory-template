@@ -4,18 +4,18 @@ Generate directory listings in the request's prefered format. Customize response
 
 === Overview
 
- # http://yoursite
- run Rack::DirectoryTemplate.new "/var/www/html/somedir"
- 
- # Generate various responses 
- curl -H "Accept: application/json" "http://yoursite/somedir"
- curl -H "Accept: application/xml" "http://yoursite/somedir"
+ run Rack::DirectoryTemplate.new "/var/www/html/yoursite"
 
+ curl -H 'Accept: application/json' 'http://yoursite/somedir'
+ curl -H 'Accept: application/xml'  'http://yoursite/somedir'
+ 
  # Only accept requests for HTML and JSON 
  run Rack::DirectoryTemplate.new, ".", :accept => [:html, :json]
 
  # Get the directory from the "file" request parameter, e.g., for JavaScript file browsers.
  run Rack::DirectoryTemplate.new, ".", :param => "file"
+
+ curl 'http://yoursite/somedir?file=path/to/dir'
 
  # Custom templates
  run Rack::DirectoryTemplate.new, ".", :templates => YourFactory
@@ -31,14 +31,36 @@ Generate directory listings in the request's prefered format. Customize response
 === Description
 
 Rack::DirectoryTemplate is a Rack endpoint for directory listings that examines the request's 
-Accept header and generates a reply in the prefered format. Currently supports HTML, JSON, and XML. 
-Suitable defaults are provided for each format. Customization is possible via ERB templates and/or callbacks.
+Accept header and generates a reply in the prefered format. Directory names can also be given 
+via a request parameter, great for JavaScript file tree plugins 
+like {jQuery File Tree}[http://www.abeautifulsite.net/blog/2008/03/jquery-file-tree].
 
-Directory names can also be given via a request parameter.
+Currently supports HTML, JSON, and XML. Suitable defaults are provided for each format. Customization is 
+possible via ERB templates and/or callbacks.
 
-=== Todo
+Requests for files will be passed off to the handler given by the +:app+ option, which
+defaults to <code>Rack::File</code>.
 
-* Determine response format based on request URL's extension
+=== Creating Templates
+
+Templates can be created via +ERB+, a +Proc+, or a class that responds to a +html+, +xml+, 
+or +json+ method. A directory listing for the request will be provided to these in the 
+following format, either as an argument or as a template variable:
+
+  { :url   => "/some/path"
+    :name  => "path, 
+    :user  => "sshaw", 
+    :group => "sshaw",  
+    :type  => "directory",
+    :mtime => "Tue Jun 05 14:13:31 -0700 2012",
+    :atime => "Tue Jun 05 14:13:31 -0700 2012",
+    :ctime => "Tue Jun 05 14:13:31 -0700 2012",
+    :mode  => 16877,
+    :files => [ { 
+      :url  => "/some/path/file1", 
+      :name => "file", 
+      # same fields as above 
+     } ] }
 
 === Author
 

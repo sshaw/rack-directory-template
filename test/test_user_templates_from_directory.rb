@@ -1,6 +1,6 @@
-require "directory_template_test"
+require "test_helper"
 
-class TestUserTemplatesFromDirectory < DirectoryTemplateTest 
+class TestUserTemplatesFromDirectory < Test::Unit::TestCase
   def setup
     @templates = Dir.mktmpdir    
     File.open("#{@templates}/html.erb", "w") { |f| f.write("html") }
